@@ -7,12 +7,14 @@ use rustc_lexer::{LiteralKind, Token, TokenKind};
 enum TextCodeFSAState {
     ParsingText,
     ParsingCode,
+    ParsingEchoCode,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Part {
     Text(String),
     Code(String),
+    EchoCode(String),
 }
 
 impl Part {
@@ -23,10 +25,19 @@ impl Part {
         }
     }
 
+    pub fn add_char_to_content(&mut self, c: char) {
+        match self {
+            Part::Text(text) => text.push(c),
+            Part::Code(code) => code.push(c),
+            Part::EchoCode(code) => code.push(c),
+        }
+    }
+
     pub fn get_content(&self) -> &String {
         match self {
             Part::Code(ref content) => content,
             Part::Text(ref content) => content,
+            Part::EchoCode(ref content) => content,
         }
     }
 }
@@ -118,10 +129,7 @@ impl TextCodeFSA {
         if self.data.last().is_some() {
             Some(self.data.last().unwrap().get_content())
         } else {
-            match self.state {
-                TextCodeFSAState::ParsingCode => None,
-                TextCodeFSAState::ParsingText => None,
-            }
+            None
         }
     }
 
@@ -153,18 +161,17 @@ impl TextCodeFSA {
         let is_correct_type = match (&self.state, self.data.last()) {
             (TextCodeFSAState::ParsingCode, Some(Part::Code(_))) => true,
             (TextCodeFSAState::ParsingText, Some(Part::Text(_))) => true,
+            (TextCodeFSAState::ParsingEchoCode, Some(Part::EchoCode(_))) => true,
             _ => false,
         };
 
         if self.data.last().is_some() && is_correct_type {
-            match self.data.last_mut().unwrap() {
-                Part::Text(ref mut text) => text.push(c),
-                Part::Code(ref mut code) => code.push(c),
-            }
+            self.data.last_mut().unwrap().add_char_to_content(c);
         } else {
             match self.state {
                 TextCodeFSAState::ParsingText => self.data.push(Part::Text(c.to_string())),
                 TextCodeFSAState::ParsingCode => self.data.push(Part::Code(c.to_string())),
+                TextCodeFSAState::ParsingEchoCode => self.data.push(Part::EchoCode(c.to_string())),
             }
         }
     }
@@ -176,7 +183,8 @@ impl TextCodeFSA {
 
         while payload_char_index < payload_chars.len() {
             match self.state {
-                TextCodeFSAState::ParsingCode => {
+                TextCodeFSAState::ParsingCode |
+                TextCodeFSAState::ParsingEchoCode => {
                     if payload[payload_char_index..].starts_with("?>") {
                         let latest_rust_code_part = self.get_last_part_content().unwrap_or("");
 
@@ -209,6 +217,10 @@ impl TextCodeFSA {
                     if payload[payload_char_index..].starts_with("<?rs") {
                         payload_char_index += "<?rs".len();
                         self.state = TextCodeFSAState::ParsingCode;
+                        continue;
+                    } else if payload[payload_char_index..].starts_with("<?=") {
+                        payload_char_index += "<?=".len();
+                        self.state = TextCodeFSAState::ParsingEchoCode;
                         continue;
                     } else {
                         self.push_char_to_latest_entry(payload_chars[payload_char_index]);

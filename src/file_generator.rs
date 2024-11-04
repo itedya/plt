@@ -4,19 +4,25 @@ fn generate_file(fn_name: impl Into<String>, data: &Vec<Part>) -> Vec<String> {
     let fn_name = fn_name.into();
 
     let mut code_lines: Vec<String> = Vec::new();
-    code_lines.push(format!("fn {fn_name}() {{"));
-    code_lines.push("\tlet output_buffer = String::new()".to_string());
+    code_lines.push(format!("fn {fn_name}() -> Result<String, Box<dyn std::error::Error>> {{"));
+    code_lines.push("use std::fmt::Write;".to_string());
+    code_lines.push("let mut output_buffer = String::new();".to_string());
 
     for part in data {
         match part {
             Part::Code(code) => {
                 code_lines.push(code.to_string());
             }
+            Part::EchoCode(code) => {
+                code_lines.push(format!("\twrite!(output_buffer, \"{{}}\", {{ {code} }})?;"));
+            }
             Part::Text(text) => {
-                code_lines.push(format!("write!(output_buffer, \"{}\");", text.escape_default()));
+                code_lines.push(format!("write!(output_buffer, \"{{}}\", \"{}\")?;", text.escape_default()));
             }
         }
     }
+
+    code_lines.push("Ok(output_buffer)".to_string());
 
     code_lines.push("}".to_string());
 
@@ -47,7 +53,6 @@ mod tests {
 
         let code = generated_file.join("\r\n");
 
-        println!("{}", code);
         println!("{}", format_code(&code));
     }
 }
