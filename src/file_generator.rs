@@ -1,10 +1,11 @@
 pub use crate::prelude::*;
 
-fn generate_file(fn_name: impl Into<String>, data: &Vec<Part>) -> Vec<String> {
+pub fn generate_file(fn_name: impl Into<String>, args: Vec<String>, data: &Vec<Part>) -> Vec<String> {
     let fn_name = fn_name.into();
 
+    let args = args.join(", ");
     let mut code_lines: Vec<String> = Vec::new();
-    code_lines.push(format!("fn {fn_name}() -> Result<String, Box<dyn std::error::Error>> {{"));
+    code_lines.push(format!("fn {fn_name}({args}) -> Result<String, Box<dyn std::error::Error>> {{"));
     code_lines.push("use std::fmt::Write;".to_string());
     code_lines.push("let mut output_buffer = String::new();".to_string());
 
@@ -29,7 +30,7 @@ fn generate_file(fn_name: impl Into<String>, data: &Vec<Part>) -> Vec<String> {
     code_lines
 }
 
-fn format_code(code: &str) -> String {
+pub fn format_code(code: &str) -> String {
     let syntax_tree = syn::parse_file(code).unwrap();
     let formatted = prettyplease::unparse(&syntax_tree);
     formatted
