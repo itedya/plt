@@ -1,11 +1,17 @@
 pub use crate::prelude::*;
 
-pub fn generate_file(fn_name: impl Into<String>, args: Vec<String>, data: &Vec<Part>) -> Vec<String> {
+pub fn generate_file(
+    fn_name: impl Into<String>,
+    args: Vec<String>,
+    data: &Vec<Part>,
+) -> Vec<String> {
     let fn_name = fn_name.into();
 
     let args = args.join(", ");
     let mut code_lines: Vec<String> = Vec::new();
-    code_lines.push(format!("fn {fn_name}({args}) -> Result<String, Box<dyn std::error::Error>> {{"));
+    code_lines.push(format!(
+        "fn {fn_name}({args}) -> plt::prelude::Result<String> {{"
+    ));
     code_lines.push("use std::fmt::Write;".to_string());
     code_lines.push("let mut output_buffer = String::new();".to_string());
 
@@ -18,7 +24,10 @@ pub fn generate_file(fn_name: impl Into<String>, args: Vec<String>, data: &Vec<P
                 code_lines.push(format!("\twrite!(output_buffer, \"{{}}\", {{ {code} }})?;"));
             }
             Part::Text(text) => {
-                code_lines.push(format!("write!(output_buffer, \"{{}}\", \"{}\")?;", text.escape_default()));
+                code_lines.push(format!(
+                    "write!(output_buffer, \"{{}}\", \"{}\")?;",
+                    text.escape_default()
+                ));
             }
         }
     }
@@ -38,9 +47,9 @@ pub fn format_code(code: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::read_to_string;
     use crate::file_generator::{format_code, generate_file};
     use crate::prelude::*;
+    use std::fs::read_to_string;
 
     #[test]
     fn it_works() {
@@ -50,7 +59,7 @@ mod tests {
 
         let result = fsa.run(file);
 
-        let generated_file = generate_file("test_template", result);
+        let generated_file = generate_file("test_template", Vec::new(), result);
 
         let code = generated_file.join("\r\n");
 
