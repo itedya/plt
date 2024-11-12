@@ -1,6 +1,4 @@
 use std::cmp::PartialEq;
-use std::fmt::Display;
-use std::str::FromStr;
 use rustc_lexer::{LiteralKind, Token, TokenKind};
 
 #[derive(Debug, Clone)]
@@ -119,10 +117,6 @@ impl TextCodeFSA {
             state: TextCodeFSAState::ParsingText,
             data: Vec::new(),
         }
-    }
-
-    fn check_if_rust_code_is_valid(rust_code: &str) -> bool {
-        proc_macro2::TokenStream::from_str(rust_code).is_ok()
     }
 
     fn get_last_part_content(&self) -> Option<&str> {
